@@ -11,7 +11,7 @@ export async function POST(request) {
           contents: [{
             parts: [
               {
-                text: 'Look at this image and categorize the community issue. Reply with ONLY one of these exact words: Pothole, Water Leak, Streetlight, Waste, Tree Fall, Infrastructure. Nothing else.'
+                text: 'Look at this image. Reply with ONLY one of these exact words, nothing else: Pothole, Water Leak, Streetlight, Waste, Tree Fall, Infrastructure'
               },
               {
                 inline_data: {
@@ -26,10 +26,21 @@ export async function POST(request) {
     )
 
     const data = await response.json()
-    const category = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
-    return Response.json({ category })
+    console.log('Gemini response:', JSON.stringify(data))
+    
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+    console.log('Raw category:', rawText)
+    
+    const validCategories = ["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"]
+    const matched = validCategories.find(cat => 
+      rawText.toLowerCase().includes(cat.toLowerCase())
+    )
+    
+    console.log('Matched category:', matched)
+    return Response.json({ category: matched || 'Pothole' })
 
   } catch (error) {
+    console.log('Error:', error.message)
     return Response.json({ error: error.message }, { status: 500 })
   }
 }
