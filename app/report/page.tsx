@@ -15,12 +15,11 @@ export default function ReportPage() {
   const [imageBase64, setImageBase64] = useState<any>(null)
   const [mediaType, setMediaType] = useState<any>(null)
 
-  // 📍 New Hidden Numeric Coordinates States for Mapping Array Rows
+  // Explicit tracking coordinates
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
   const [gpsLocked, setGpsLocked] = useState(false)
 
-  // Automatically fetch high-accuracy coordinates when page loads
   useEffect(() => {
     captureGPS()
   }, [])
@@ -31,12 +30,10 @@ export default function ReportPage() {
         setLatitude(pos.coords.latitude)
         setLongitude(pos.coords.longitude)
         setGpsLocked(true)
-        // If location text field is empty, pre-fill it with text coordinates
         if (!location) {
           setLocation(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`)
         }
-      }, (err) => console.log("Location access deferred or restricted:", err), 
-      { enableHighAccuracy: true })
+      }, (err) => console.log("GPS prompt deferred:", err), { enableHighAccuracy: true })
     }
   }
 
@@ -86,10 +83,20 @@ export default function ReportPage() {
       return
     }
     setLoading(true)
-    
-    // Fallback coordinates if the user clears the form inputs or blocks tracking hardware
-    const finalLat = latitude || 13.6288 
-    const finalLng = longitude || 79.4192
+
+    // SMART PARSING: If user explicitly typed or edited raw numeric coordinates like "14.4426, 79.9865"
+    let finalLat = latitude
+    let finalLng = longitude
+
+    if (location.includes(',')) {
+      const parts = location.split(',')
+      const parsedLat = parseFloat(parts[0])
+      const parsedLng = parseFloat(parts[1])
+      if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+        finalLat = parsedLat
+        finalLng = parsedLng
+      }
+    }
 
     const { error } = await supabase.from('issues').insert([{
       title,
@@ -97,8 +104,8 @@ export default function ReportPage() {
       location,
       severity,
       category,
-      latitude: finalLat,  // Pushes precise float to DB column
-      longitude: finalLng, // Pushes precise float to DB column
+      latitude: finalLat, // Inserts exact coordinates parsed or captured directly
+      longitude: finalLng,
       status: 'Reported',
       votes: 0
     }])
@@ -114,7 +121,7 @@ export default function ReportPage() {
       setImagePreview(null)
       setSeverity('Medium')
       setCategory('Pothole')
-      // Pull fresh coordinates for the next ticket submission
+      setGpsLocked(false)
       captureGPS()
     }
   }
@@ -140,7 +147,6 @@ export default function ReportPage() {
         )}
 
         <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-6">
-
           {/* Photo Upload */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">📸 Upload Photo</label>
@@ -165,13 +171,11 @@ export default function ReportPage() {
 
           {/* AI Category */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              🤖 AI Category {analyzing ? '(Detecting...)' : '(Auto-detected)'}
-            </label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">🤖 AI Category</label>
             <div className="flex gap-2 flex-wrap">
               {["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"].map((cat) => (
                 <span key={cat} onClick={() => setCategory(cat)}
-                  className={`px-3 py-1 rounded-full text-sm border cursor-pointer ${category === cat ? "bg-blue-600 text-white border-blue-600" : "text-gray-600 border-gray-300 hover:border-blue-400"}`}>
+                  className={`px-3 py-1 rounded-full text-sm border cursor-pointer transition-all ${category === cat ? "bg-blue-600 text-white border-blue-600" : "text-gray-600 border-gray-300 hover:border-blue-400"}`}>
                   {cat}
                 </span>
               ))}
@@ -180,26 +184,26 @@ export default function ReportPage() {
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📝 Issue Title <span className="text-blue-400 text-xs">(AI filled)</span></label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">📝 Issue Title</label>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)}
-              placeholder="AI will fill this automatically..."
+              placeholder="Enter issue headline..."
               className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📄 Description <span className="text-blue-400 text-xs">(AI filled)</span></label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">📄 Description</label>
             <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)}
-              placeholder="AI will fill this automatically..."
+              placeholder="Describe the incident parameters..."
               className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
 
           {/* Location */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📍 Location</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">📍 Location Coordinates / Description</label>
             <div className="flex gap-2">
               <input type="text" value={location} onChange={e => setLocation(e.target.value)}
-                placeholder="Enter your location"
+                placeholder="e.g., 14.4426, 79.9865 or Nellore Ward 8"
                 className="flex-1 border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
               <button type="button" onClick={() => {
                 navigator.geolocation.getCurrentPosition(pos => {
@@ -216,11 +220,11 @@ export default function ReportPage() {
 
           {/* Severity */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">⚠️ Severity <span className="text-blue-400 text-xs">(AI detected)</span></label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">⚠️ Severity</label>
             <div className="flex gap-3">
               {[["🟢", "Low"], ["🟡", "Medium"], ["🔴", "High"]].map(([emoji, level]) => (
                 <button type="button" key={level} onClick={() => setSeverity(level)}
-                  className={`flex-1 py-2 rounded-xl border font-medium ${severity === level ? "border-blue-400 bg-blue-50 text-blue-600" : "border-gray-200 text-gray-500 hover:border-gray-400"}`}>
+                  className={`flex-1 py-2 rounded-xl border font-medium transition-all ${severity === level ? "border-blue-400 bg-blue-50 text-blue-600" : "border-gray-200 text-gray-500 hover:border-gray-400"}`}>
                   {emoji} {level}
                 </button>
               ))}
@@ -230,7 +234,7 @@ export default function ReportPage() {
           {/* Submit */}
           <button onClick={handleSubmit} disabled={loading || analyzing}
             className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition-all transform active:scale-[0.995]">
-            {loading ? '⏳ Submitting...' : analyzing ? '🤖 AI Analyzing...' : '🚀 Submit Report'}
+            {loading ? '⏳ Submitting...' : '🚀 Submit Report'}
           </button>
         </div>
       </div>
