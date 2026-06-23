@@ -1,43 +1,41 @@
-import { NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import Anthropic from '@anthropic-ai/sdk'
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY
+})
 
 export async function POST(request) {
   try {
-    const data = await request.json();
-    const { imageBase64 } = data;
+    const { imageBase64, mediaType } = await request.json()
 
-    if (!imageBase64) {
-      return NextResponse.json({ error: "Missing image data" }, { status: 400 });
-    }
-
-    const prompt = `
-      You are the core verification engine for CommunityHero.
-      Look closely at this image uploaded by a citizen:
-      Identify the category string matching this list exactly: Pothole, Water Leak, Streetlight, Waste, Tree Fall, Infrastructure.
-      
-      Return ONLY the plain single word category from the list. Do not include markdown formatting, punctuation, or extra sentences.
-    `;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: [
-        prompt,
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      messages: [
         {
-          inlineData: {
-            mimeType: "image/jpeg",
-            data: imageBase64
-          }
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: imageBase64
+              }
+            },
+            {
+              type: 'text',
+              text: 'Look at this image and categorize the community issue. Reply with ONLY one of these exact words: Pothole, Water Leak, Streetlight, Waste, Tree Fall, Infrastructure. Nothing else.'
+            }
+          ]
         }
       ]
-    });
+    })
 
-    const categoryText = response.text ? response.text.trim() : "Pothole";
-    return NextResponse.json({ category: categoryText });
+    const category = response.content[0].text.trim()
+    return Response.json({ category })
 
   } catch (error) {
-    console.error("Gemini Vision API Error:", error);
-    return NextResponse.json({ error: "Processing failure" }, { status: 500 });
+    return Response.json({ error: error.message }, { status: 500 })
   }
 }
