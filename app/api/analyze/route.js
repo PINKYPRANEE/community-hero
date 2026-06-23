@@ -11,7 +11,14 @@ export async function POST(request) {
           contents: [{
             parts: [
               {
-                text: 'Look at this image. Reply with ONLY one of these exact words, nothing else: Pothole, Water Leak, Streetlight, Waste, Tree Fall, Infrastructure'
+                text: `Analyze this community issue image and respond in this exact JSON format:
+{
+  "category": "one of: Pothole, Water Leak, Streetlight, Waste, Tree Fall, Infrastructure",
+  "title": "short title of the issue in 5-8 words",
+  "description": "detailed description of the issue in 2-3 sentences",
+  "severity": "one of: Low, Medium, High"
+}
+Only respond with the JSON, nothing else.`
               },
               {
                 inline_data: {
@@ -26,21 +33,17 @@ export async function POST(request) {
     )
 
     const data = await response.json()
-    console.log('Gemini response:', JSON.stringify(data))
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '{}'
     
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
-    console.log('Raw category:', rawText)
-    
-    const validCategories = ["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"]
-    const matched = validCategories.find(cat => 
-      rawText.toLowerCase().includes(cat.toLowerCase())
-    )
-    
-    console.log('Matched category:', matched)
-    return Response.json({ category: matched || 'Pothole' })
+    try {
+      const clean = rawText.replace(/```json|```/g, '').trim()
+      const parsed = JSON.parse(clean)
+      return Response.json(parsed)
+    } catch {
+      return Response.json({ category: 'Pothole', title: '', description: '', severity: 'Medium' })
+    }
 
   } catch (error) {
-    console.log('Error:', error.message)
     return Response.json({ error: error.message }, { status: 500 })
   }
 }

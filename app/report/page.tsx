@@ -22,14 +22,12 @@ export default function ReportPage() {
     setMediaType(file.type)
     const reader = new FileReader()
     reader.onload = async (event) => {
-      const resultString = event.target?.result;
-      
+      const resultString = event.target?.result
       if (typeof resultString === 'string') {
         const base64 = resultString.split(',')[1]
         setImageBase64(base64)
         setImagePreview(resultString)
 
-        // Auto analyze with AI
         setAnalyzing(true)
         try {
           const res = await fetch('/api/analyze', {
@@ -39,17 +37,15 @@ export default function ReportPage() {
           })
           const data = await res.json()
           
-          if (data.category) {
-            const validCategories = ["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"];
-            // Fix: Case-insensitive lookups ensure the blue button updates instantly
-            const matchedCategory = validCategories.find(
-              (cat) => cat.toLowerCase() === data.category.trim().toLowerCase()
-            );
-            
-            if (matchedCategory) {
-              setCategory(matchedCategory)
-            }
-          }
+          const validCategories = ["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"]
+          const matched = validCategories.find(cat =>
+            data.category?.toLowerCase().includes(cat.toLowerCase())
+          )
+          if (matched) setCategory(matched)
+          if (data.title) setTitle(data.title)
+          if (data.description) setDescription(data.description)
+          if (data.severity) setSeverity(data.severity)
+
         } catch (err) {
           console.error(err)
         }
@@ -83,6 +79,8 @@ export default function ReportPage() {
       setDescription('')
       setLocation('')
       setImagePreview(null)
+      setSeverity('Medium')
+      setCategory('Pothole')
     }
   }
 
@@ -98,7 +96,7 @@ export default function ReportPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-10">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">🚨 Report an Issue</h1>
-        <p className="text-gray-500 mb-8">Upload a photo and our AI will categorize it automatically</p>
+        <p className="text-gray-500 mb-8">Upload a photo — AI will fill everything automatically!</p>
 
         {success && (
           <div className="bg-green-100 text-green-700 px-4 py-3 rounded-xl mb-6 font-medium">
@@ -125,7 +123,7 @@ export default function ReportPage() {
             </label>
             {analyzing && (
               <div className="mt-2 text-blue-500 font-medium animate-pulse">
-                🤖 AI is analyzing your image...
+                🤖 AI is analyzing your image and filling the form...
               </div>
             )}
           </div>
@@ -147,17 +145,17 @@ export default function ReportPage() {
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📝 Issue Title</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">📝 Issue Title <span className="text-blue-400 text-xs">(AI filled)</span></label>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. Large pothole on main road"
+              placeholder="AI will fill this automatically..."
               className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📄 Description</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">📄 Description <span className="text-blue-400 text-xs">(AI filled)</span></label>
             <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)}
-              placeholder="Describe the issue in detail..."
+              placeholder="AI will fill this automatically..."
               className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
 
@@ -180,7 +178,7 @@ export default function ReportPage() {
 
           {/* Severity */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">⚠️ Severity</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">⚠️ Severity <span className="text-blue-400 text-xs">(AI detected)</span></label>
             <div className="flex gap-3">
               {[["🟢", "Low"], ["🟡", "Medium"], ["🔴", "High"]].map(([emoji, level]) => (
                 <button key={level} onClick={() => setSeverity(level)}
@@ -192,9 +190,9 @@ export default function ReportPage() {
           </div>
 
           {/* Submit */}
-          <button onClick={handleSubmit} disabled={loading}
+          <button onClick={handleSubmit} disabled={loading || analyzing}
             className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-bold hover:bg-blue-700 disabled:opacity-50">
-            {loading ? '⏳ Submitting...' : '🚀 Submit Report'}
+            {loading ? '⏳ Submitting...' : analyzing ? '🤖 AI Analyzing...' : '🚀 Submit Report'}
           </button>
         </div>
       </div>
