@@ -7,8 +7,8 @@ const mapContainerStyle = { width: '100%', height: '450px' }
 const center = { lat: 14.4426, lng: 79.9865 } // Nellore, India
 
 export default function MapPage() {
-  const [issues, setIssues] = useState([])
-  const [selected, setSelected] = useState(null)
+  const [issues, setIssues] = useState<any[]>([])
+  const [selected, setSelected] = useState<any>(null)
 
   useEffect(() => {
     fetchIssues()

@@ -11,9 +11,9 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [imagePreview, setImagePreview] = useState(null)
-  const [imageBase64, setImageBase64] = useState(null)
-  const [mediaType, setMediaType] = useState(null)
+  const [imagePreview, setImagePreview] = useState<any>(null)
+  const [imageBase64, setImageBase64] = useState<any>(null)
+  const [mediaType, setMediaType] = useState<any>(null)
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0]
