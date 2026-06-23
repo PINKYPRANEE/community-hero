@@ -1,65 +1,121 @@
-import Image from "next/image";
+'use client'
+import { useState, useEffect } from 'react'
+import { supabase } from './lib/supabase'
 
 export default function Home() {
+  const [issues, setIssues] = useState([])
+
+  useEffect(() => {
+    fetchIssues()
+  }, [])
+
+  const fetchIssues = async () => {
+    const { data } = await supabase
+      .from('issues')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(5)
+    if (data) setIssues(data)
+  }
+
+  const handleVote = async (id, currentVotes) => {
+    await supabase.from('issues').update({ votes: currentVotes + 1 }).eq('id', id)
+    fetchIssues()
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-gray-50">
+      {/* Navbar */}
+      <nav className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">🏘️</span>
+          <span className="text-xl font-bold text-blue-600">CommunityHero</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+        <div className="flex gap-3">
+          <a href="/dashboard" className="px-4 py-2 text-blue-600 font-medium hover:underline">Dashboard</a>
+          <a href="/map" className="px-4 py-2 text-blue-600 font-medium hover:underline">Map</a>
+          <a href="/report" className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Report Issue</a>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="text-center py-20 px-4">
+        <h1 className="text-5xl font-bold text-gray-800 mb-4">
+          Report. Track. <span className="text-blue-600">Resolve.</span>
+        </h1>
+        <p className="text-xl text-gray-500 mb-8 max-w-xl mx-auto">
+          Help fix your community — report potholes, broken streetlights, water leaks and more in seconds.
+        </p>
+        <div className="flex justify-center gap-4">
+          <a href="/report" className="px-6 py-3 bg-blue-600 text-white rounded-xl text-lg font-semibold hover:bg-blue-700">
+            🚨 Report an Issue
           </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
+          <a href="/map" className="px-6 py-3 border-2 border-blue-600 text-blue-600 rounded-xl text-lg font-semibold hover:bg-blue-50">
+            🗺️ View Map
           </a>
         </div>
-      </main>
-    </div>
-  );
+      </section>
+
+      {/* Stats Section */}
+      <section className="grid grid-cols-3 gap-6 max-w-3xl mx-auto px-4 mb-16">
+        <div className="bg-white rounded-2xl p-6 text-center shadow">
+          <div className="text-4xl font-bold text-blue-600">{issues.length}</div>
+          <div className="text-gray-500 mt-1">Issues Reported</div>
+        </div>
+        <div className="bg-white rounded-2xl p-6 text-center shadow">
+          <div className="text-4xl font-bold text-green-500">
+            {issues.filter(i => i.status === 'Resolved').length}
+          </div>
+          <div className="text-gray-500 mt-1">Issues Resolved</div>
+        </div>
+        <div className="bg-white rounded-2xl p-6 text-center shadow">
+          <div className="text-4xl font-bold text-orange-500">
+            {issues.reduce((sum, i) => sum + (i.votes || 0), 0)}
+          </div>
+          <div className="text-gray-500 mt-1">Total Votes</div>
+        </div>
+      </section>
+
+      {/* Recent Issues */}
+      <section className="max-w-3xl mx-auto px-4 mb-16">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">🔴 Recent Issues</h2>
+        {issues.length === 0 ? (
+          <div className="bg-white rounded-2xl p-10 text-center shadow text-gray-400">
+            No issues reported yet. Be the first! 🦸
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {issues.map((issue) => (
+              <div key={issue.id} className="bg-white rounded-2xl p-5 shadow flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="text-3xl">
+                    {issue.category === 'Pothole' ? '🕳️' :
+                     issue.category === 'Water Leak' ? '💧' :
+                     issue.category === 'Streetlight' ? '💡' :
+                     issue.category === 'Waste' ? '🗑️' :
+                     issue.category === 'Tree Fall' ? '🌳' : '🏗️'}
+                  </span>
+                  <div>
+                    <div className="font-semibold text-gray-800">{issue.title}</div>
+                    <div className="text-sm text-gray-400">📍 {issue.location}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    issue.status === 'Resolved' ? 'bg-green-100 text-green-600' :
+                    issue.status === 'In Progress' ? 'bg-yellow-100 text-yellow-600' :
+                    'bg-red-100 text-red-600'
+                  }`}>{issue.status}</span>
+                  <button onClick={() => handleVote(issue.id, issue.votes)}
+                    className="text-gray-400 text-sm hover:text-blue-500">
+                    👍 {issue.votes}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
+  )
 }
