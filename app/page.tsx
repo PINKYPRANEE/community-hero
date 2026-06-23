@@ -51,19 +51,19 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="text-center py-20 px-4">
-        <h1 className="text-5xl font-bold text-gray-800 mb-4">
+      {/* Hero Section with interactive visual entry */}
+      <section className="text-center py-20 px-4 transition-all duration-1000 ease-out transform">
+        <h1 className="text-5xl font-bold text-gray-800 mb-4 animate-bounce [animation-iteration-count:1] [animation-duration:1.5s]">
           Report. Track. <span className="text-blue-600">Resolve.</span>
         </h1>
-        <p className="text-xl text-gray-500 mb-8 max-w-xl mx-auto">
+        <p className="text-xl text-gray-500 mb-8 max-w-xl mx-auto transition-all duration-700 delay-300 opacity-95">
           Help fix your community — report potholes, broken streetlights, water leaks and more in seconds.
         </p>
-        <div className="flex justify-center gap-4">
-          <a href="/report" className="px-6 py-3 bg-blue-600 text-white rounded-xl text-lg font-semibold hover:bg-blue-700">
+        <div className="flex justify-center gap-4 transition-all duration-1000 delay-500">
+          <a href="/report" className="px-6 py-3 bg-blue-600 text-white rounded-xl text-lg font-semibold hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all duration-200 shadow-md shadow-blue-200">
             🚨 Report an Issue
           </a>
-          <a href="/map" className="px-6 py-3 border-2 border-blue-600 text-blue-600 rounded-xl text-lg font-semibold hover:bg-blue-50">
+          <a href="/map" className="px-6 py-3 border-2 border-blue-600 text-blue-600 rounded-xl text-lg font-semibold hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all duration-200">
             🗺️ View Map
           </a>
         </div>
