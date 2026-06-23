@@ -24,7 +24,6 @@ export default function ReportPage() {
     reader.onload = async (event) => {
       const resultString = event.target?.result;
       
-      // Fixes the red lines by making sure the result is a text string before parsing
       if (typeof resultString === 'string') {
         const base64 = resultString.split(',')[1]
         setImageBase64(base64)
@@ -39,7 +38,18 @@ export default function ReportPage() {
             body: JSON.stringify({ imageBase64: base64, mediaType: file.type })
           })
           const data = await res.json()
-          if (data.category) setCategory(data.category)
+          
+          if (data.category) {
+            const validCategories = ["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"];
+            // Fix: Case-insensitive lookups ensure the blue button updates instantly
+            const matchedCategory = validCategories.find(
+              (cat) => cat.toLowerCase() === data.category.trim().toLowerCase()
+            );
+            
+            if (matchedCategory) {
+              setCategory(matchedCategory)
+            }
+          }
         } catch (err) {
           console.error(err)
         }
@@ -107,7 +117,8 @@ export default function ReportPage() {
               ) : (
                 <>
                   <div className="text-4xl mb-2">📷</div>
-                  <p className="text-gray-400">Click to upload or drag & drop</p>                  <p className="text-xs text-gray-300 mt-1">PNG, JPG up to 10MB</p>
+                  <p className="text-gray-400">Click to upload or drag & drop</p>
+                  <p className="text-xs text-gray-300 mt-1">PNG, JPG up to 10MB</p>
                 </>
               )}
               <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
