@@ -15,7 +15,7 @@ export default function ReportPage() {
   const [imageBase64, setImageBase64] = useState<any>(null)
   const [mediaType, setMediaType] = useState<any>(null)
 
-  // Explicit hardware GPS coordinates states
+  // Explicit tracking coordinates
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
   const [gpsLocked, setGpsLocked] = useState(false)
@@ -87,8 +87,7 @@ export default function ReportPage() {
     let finalLat = latitude
     let finalLng = longitude
 
-    // 🌍 ADVANCED GEOPARSING PIPELINE
-    // Step A: If the user explicitly typed raw numerical coordinates manually
+    // Step A: Parse location if it contains manual comma-separated coordinates
     if (location.includes(',')) {
       const parts = location.split(',')
       const parsedLat = parseFloat(parts[0])
@@ -99,7 +98,7 @@ export default function ReportPage() {
       }
     }
 
-    // Step B: If no live GPS or numerical inputs are locked, translate textual location name into pins instantly
+    // Step B: Convert typed city name or address text into coordinates dynamically
     if (!finalLat || !finalLng) {
       try {
         const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`)
@@ -108,17 +107,10 @@ export default function ReportPage() {
         if (geoData && geoData.length > 0) {
           finalLat = parseFloat(geoData[0].lat)
           finalLng = parseFloat(geoData[0].lon)
-          console.log(`🤖 Geocoded successfully: ${location} ->`, finalLat, finalLng)
         }
       } catch (err) {
         console.error("Geocoding service error:", err)
       }
-    }
-
-    // Ultimate fallback if geolocation fails completely
-    if (!finalLat || !finalLng) {
-      finalLat = 14.4426
-      finalLng = 79.9865
     }
 
     const { error } = await supabase.from('issues').insert([{
@@ -194,7 +186,7 @@ export default function ReportPage() {
 
           {/* AI Category */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">🤖 AI Category {analyzing ? '(Detecting...)' : '(Auto-detected)'}</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">🤖 AI Category</label>
             <div className="flex gap-2 flex-wrap">
               {["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"].map((cat) => (
                 <span key={cat} onClick={() => setCategory(cat)}
@@ -207,7 +199,7 @@ export default function ReportPage() {
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📝 Issue Title <span className="text-blue-400 text-xs">(AI filled)</span></label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">📝 Issue Title</label>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)}
               placeholder="AI will fill this automatically..."
               className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
@@ -215,13 +207,13 @@ export default function ReportPage() {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📄 Description <span className="text-blue-400 text-xs">(AI filled)</span></label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">📄 Description</label>
             <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)}
               placeholder="AI will fill this automatically..."
               className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
 
-          {/* Location Input with Integrated Geocoding Handler */}
+          {/* Location */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">📍 Location</label>
             <div className="flex gap-2">
@@ -243,7 +235,7 @@ export default function ReportPage() {
 
           {/* Severity */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">⚠️ Severity <span className="text-blue-400 text-xs">(AI detected)</span></label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">⚠️ Severity</label>
             <div className="flex gap-3">
               {[["🟢", "Low"], ["🟡", "Medium"], ["🔴", "High"]].map(([emoji, level]) => (
                 <button type="button" key={level} onClick={() => setSeverity(level)}
@@ -257,7 +249,7 @@ export default function ReportPage() {
           {/* Submit */}
           <button onClick={handleSubmit} disabled={loading || analyzing}
             className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition-all transform active:scale-[0.995]">
-            {loading ? '⏳ Submitting...' : analyzing ? '🤖 AI Analyzing...' : '🚀 Submit Report'}
+            {loading ? '⏳ Submitting...' : '🚀 Submit Report'}
           </button>
         </div>
       </div>
