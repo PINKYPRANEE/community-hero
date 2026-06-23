@@ -11,14 +11,7 @@ export async function POST(request) {
           contents: [{
             parts: [
               {
-                text: `Analyze this community issue image and respond in this exact JSON format:
-{
-  "category": "one of: Pothole, Water Leak, Streetlight, Waste, Tree Fall, Infrastructure",
-  "title": "short title of the issue in 5-8 words",
-  "description": "detailed description of the issue in 2-3 sentences",
-  "severity": "one of: Low, Medium, High"
-}
-Only respond with the JSON, nothing else.`
+                text: 'Look at this image and categorize the community issue. Reply with ONLY one of these exact words, nothing else: Pothole, Water Leak, Streetlight, Waste, Tree Fall, Infrastructure'
               },
               {
                 inline_data: {
@@ -33,15 +26,12 @@ Only respond with the JSON, nothing else.`
     )
 
     const data = await response.json()
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '{}'
-    
-    try {
-      const clean = rawText.replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(clean)
-      return Response.json(parsed)
-    } catch {
-      return Response.json({ category: 'Pothole', title: '', description: '', severity: 'Medium' })
-    }
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+    const validCategories = ["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"]
+    const matched = validCategories.find(cat => 
+      rawText.toLowerCase().includes(cat.toLowerCase())
+    )
+    return Response.json({ category: matched || 'Pothole' })
 
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 })
