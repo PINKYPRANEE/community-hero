@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 
 export default function Home() {
-  // Explicitly tell TypeScript this array stores object structures
   const [issues, setIssues] = useState<any[]>([])
+  // State variables for keeping track of active filter selections
+  const [selectedCategory, setSelectedCategory] = useState<string>('All')
+  const [selectedStatus, setSelectedStatus] = useState<string>('All')
 
   useEffect(() => {
     fetchIssues()
@@ -15,17 +17,23 @@ export default function Home() {
       .from('issues')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(5)
+      .limit(20) // Increased so filters have plenty of sample tickets to sort through!
     if (data) setIssues(data)
   }
 
-  // Explicitly declaring variable types to clear parameter line warnings
   const handleVote = async (e: React.MouseEvent, id: any, currentVotes: number) => {
-    e.preventDefault() // Prevents the <a> tag link from hijacking the click event
-    e.stopPropagation() // Prevents the event from bubbling up to the card parent
+    e.preventDefault() 
+    e.stopPropagation() 
     await supabase.from('issues').update({ votes: (currentVotes || 0) + 1 }).eq('id', id)
     fetchIssues()
   }
+
+  // Computes the exact matching cards to show instantly on the dashboard screen
+  const filteredIssues = issues.filter((issue) => {
+    const matchesCategory = selectedCategory === 'All' || issue.category === selectedCategory
+    const matchesStatus = selectedStatus === 'All' || issue.status === selectedStatus
+    return matchesCategory && matchesStatus
+  })
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -80,16 +88,55 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Recent Issues */}
+      {/* Recent Issues Panel */}
       <section className="max-w-3xl mx-auto px-4 mb-16">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">🔴 Recent Issues</h2>
-        {issues.length === 0 ? (
-          <div className="bg-white rounded-2xl p-10 text-center shadow text-gray-400">
-            No issues reported yet. Be the first! 🦸
+
+        {/* Clean, Responsive Search & Filter Control Deck */}
+        <div className="bg-white p-5 rounded-2xl shadow mb-6 flex flex-col gap-4">
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-sm font-semibold text-gray-400 mr-2">Category:</span>
+            {['All', 'Pothole', 'Water Leak', 'Streetlight', 'Waste', 'Tree Fall', 'Infrastructure'].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
+                  selectedCategory === cat
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-200'
+                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-2 items-center border-t border-gray-100 pt-3">
+            <span className="text-sm font-semibold text-gray-400 mr-4">Status:</span>
+            {['All', 'Reported', 'In Progress', 'Resolved'].map((stat) => (
+              <button
+                key={stat}
+                onClick={() => setSelectedStatus(stat)}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
+                  selectedStatus === stat
+                    ? 'bg-gray-800 text-white border-gray-800 shadow-sm'
+                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                }`}
+              >
+                {stat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Dynamic List Rendering Area */}
+        {filteredIssues.length === 0 ? (
+          <div className="bg-white rounded-2xl p-10 text-center shadow text-gray-400 font-medium">
+            🔍 No matching issues found for this filter combination.
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {issues.map((issue: any) => (
+            {filteredIssues.map((issue: any) => (
               <a 
                 href={`/issue/${issue.id}`} 
                 key={issue.id} 
