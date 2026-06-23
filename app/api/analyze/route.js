@@ -1,6 +1,12 @@
+import { NextResponse } from "next/server";
+
 export async function POST(request) {
   try {
-    const { imageBase64, mediaType } = await request.json()
+    const { imageBase64, mediaType } = await request.json();
+
+    if (!imageBase64) {
+      return NextResponse.json({ error: "Missing image data" }, { status: 400 });
+    }
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
@@ -18,7 +24,7 @@ Adjust title, description and severity (Low/Medium/High) based on what you see.`
               },
               {
                 inline_data: {
-                  mime_type: mediaType,
+                  mime_type: mediaType || "image/jpeg",
                   data: imageBase64
                 }
               }
@@ -26,31 +32,43 @@ Adjust title, description and severity (Low/Medium/High) based on what you see.`
           }]
         })
       }
-    )
+    );
 
-    const data = await response.json()
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+    const data = await response.json();
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
     
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
+    const validCategories = ["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"];
+
+    // Try to find and parse JSON format inside Gemini's response
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0])
-      const validCategories = ["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"]
+      const parsed = JSON.parse(jsonMatch[0]);
       const matched = validCategories.find(cat => 
         parsed.category?.toLowerCase().includes(cat.toLowerCase())
-      )
-      return Response.json({
+      );
+
+      return NextResponse.json({
         category: matched || 'Pothole',
-        title: parsed.title || '',
-        description: parsed.description || '',
+        title: parsed.title || 'Community Issue Detected',
+        description: parsed.description || 'Reported via automated image scanner.',
         severity: parsed.severity || 'Medium'
-      })
+      });
     }
 
-    const matched = ["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"]
-      .find(cat => rawText.toLowerCase().includes(cat.toLowerCase()))
-    return Response.json({ category: matched || 'Pothole' })
+    // Fallback parser if Gemini outputs plain text instead of proper JSON
+    const fallbackMatch = validCategories.find(cat => 
+      rawText.toLowerCase().includes(cat.toLowerCase())
+    );
+
+    return NextResponse.json({ 
+      category: fallbackMatch || 'Pothole',
+      title: 'Community Issue Detected',
+      description: 'Reported via automated image scanner.',
+      severity: 'Medium'
+    });
 
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 })
+    console.error("API Route Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
