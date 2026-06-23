@@ -20,8 +20,10 @@ export default function Home() {
   }
 
   // Explicitly declaring variable types to clear parameter line warnings
-  const handleVote = async (id: any, currentVotes: number) => {
-    await supabase.from('issues').update({ votes: currentVotes + 1 }).eq('id', id)
+  const handleVote = async (e: React.MouseEvent, id: any, currentVotes: number) => {
+    e.preventDefault() // Prevents the <a> tag link from hijacking the click event
+    e.stopPropagation() // Prevents the event from bubbling up to the card parent
+    await supabase.from('issues').update({ votes: (currentVotes || 0) + 1 }).eq('id', id)
     fetchIssues()
   }
 
@@ -88,7 +90,11 @@ export default function Home() {
         ) : (
           <div className="flex flex-col gap-4">
             {issues.map((issue: any) => (
-              <div key={issue.id} className="bg-white rounded-2xl p-5 shadow flex items-center justify-between">
+              <a 
+                href={`/issue/${issue.id}`} 
+                key={issue.id} 
+                className="bg-white rounded-2xl p-5 shadow flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer"
+              >
                 <div className="flex items-center gap-4">
                   <span className="text-3xl">
                     {issue.category === 'Pothole' ? '🕳️' :
@@ -99,7 +105,7 @@ export default function Home() {
                   </span>
                   <div>
                     <div className="font-semibold text-gray-800 edit-title">{issue.title}</div>
-                    <div className="text-sm text-gray-400">📍 {issue.location}</div>
+                    <div className="text-sm text-gray-400">📍 {issue.location || 'Local Community'}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -107,13 +113,15 @@ export default function Home() {
                     issue.status === 'Resolved' ? 'bg-green-100 text-green-600' :
                     issue.status === 'In Progress' ? 'bg-yellow-100 text-yellow-600' :
                     'bg-red-100 text-red-600'
-                  }`}>{issue.status}</span>
-                  <button onClick={() => handleVote(issue.id, issue.votes)}
-                    className="text-gray-400 text-sm hover:text-blue-500">
-                    👍 {issue.votes}
+                  }`}>{issue.status || 'Reported'}</span>
+                  <button 
+                    onClick={(e) => handleVote(e, issue.id, issue.votes)}
+                    className="text-gray-400 text-sm hover:text-blue-500 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100 transition flex items-center gap-1"
+                  >
+                    👍 {issue.votes || 0}
                   </button>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         )}
