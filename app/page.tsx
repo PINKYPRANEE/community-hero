@@ -46,6 +46,7 @@ export default function Home() {
         <div className="flex gap-3">
           <a href="/dashboard" className="px-4 py-2 text-blue-600 font-medium hover:underline">Dashboard</a>
           <a href="/map" className="px-4 py-2 text-blue-600 font-medium hover:underline">Map</a>
+          <a href="/leaderboard" className="px-4 py-2 text-blue-600 font-medium hover:underline">🏆 Leaderboard</a>
           <a href="/report" className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Report Issue</a>
         </div>
       </nav>
