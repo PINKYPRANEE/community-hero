@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 export default function ReportPage() {
@@ -14,6 +14,31 @@ export default function ReportPage() {
   const [imagePreview, setImagePreview] = useState<any>(null)
   const [imageBase64, setImageBase64] = useState<any>(null)
   const [mediaType, setMediaType] = useState<any>(null)
+
+  // 📍 New Hidden Numeric Coordinates States for Mapping Array Rows
+  const [latitude, setLatitude] = useState<number | null>(null)
+  const [longitude, setLongitude] = useState<number | null>(null)
+  const [gpsLocked, setGpsLocked] = useState(false)
+
+  // Automatically fetch high-accuracy coordinates when page loads
+  useEffect(() => {
+    captureGPS()
+  }, [])
+
+  const captureGPS = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        setLatitude(pos.coords.latitude)
+        setLongitude(pos.coords.longitude)
+        setGpsLocked(true)
+        // If location text field is empty, pre-fill it with text coordinates
+        if (!location) {
+          setLocation(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`)
+        }
+      }, (err) => console.log("Location access deferred or restricted:", err), 
+      { enableHighAccuracy: true })
+    }
+  }
 
   const handleImageUpload = async (e: any) => {
     const file = e.target.files?.[0]
@@ -61,15 +86,23 @@ export default function ReportPage() {
       return
     }
     setLoading(true)
+    
+    // Fallback coordinates if the user clears the form inputs or blocks tracking hardware
+    const finalLat = latitude || 13.6288 
+    const finalLng = longitude || 79.4192
+
     const { error } = await supabase.from('issues').insert([{
       title,
       description,
       location,
       severity,
       category,
+      latitude: finalLat,  // Pushes precise float to DB column
+      longitude: finalLng, // Pushes precise float to DB column
       status: 'Reported',
       votes: 0
     }])
+    
     setLoading(false)
     if (error) {
       alert('Error: ' + error.message)
@@ -81,6 +114,8 @@ export default function ReportPage() {
       setImagePreview(null)
       setSeverity('Medium')
       setCategory('Pothole')
+      // Pull fresh coordinates for the next ticket submission
+      captureGPS()
     }
   }
 
@@ -166,12 +201,15 @@ export default function ReportPage() {
               <input type="text" value={location} onChange={e => setLocation(e.target.value)}
                 placeholder="Enter your location"
                 className="flex-1 border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-              <button onClick={() => {
+              <button type="button" onClick={() => {
                 navigator.geolocation.getCurrentPosition(pos => {
+                  setLatitude(pos.coords.latitude)
+                  setLongitude(pos.coords.longitude)
+                  setGpsLocked(true)
                   setLocation(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`)
                 })
-              }} className="px-4 py-3 bg-gray-100 rounded-xl text-gray-600 hover:bg-gray-200 font-medium">
-                📡 Auto
+              }} className={`px-4 py-3 rounded-xl font-medium transition-all ${gpsLocked ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {gpsLocked ? '🎯 Locked' : '📡 Auto'}
               </button>
             </div>
           </div>
@@ -181,7 +219,7 @@ export default function ReportPage() {
             <label className="block text-sm font-semibold text-gray-700 mb-2">⚠️ Severity <span className="text-blue-400 text-xs">(AI detected)</span></label>
             <div className="flex gap-3">
               {[["🟢", "Low"], ["🟡", "Medium"], ["🔴", "High"]].map(([emoji, level]) => (
-                <button key={level} onClick={() => setSeverity(level)}
+                <button type="button" key={level} onClick={() => setSeverity(level)}
                   className={`flex-1 py-2 rounded-xl border font-medium ${severity === level ? "border-blue-400 bg-blue-50 text-blue-600" : "border-gray-200 text-gray-500 hover:border-gray-400"}`}>
                   {emoji} {level}
                 </button>
@@ -191,7 +229,7 @@ export default function ReportPage() {
 
           {/* Submit */}
           <button onClick={handleSubmit} disabled={loading || analyzing}
-            className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-bold hover:bg-blue-700 disabled:opacity-50">
+            className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition-all transform active:scale-[0.995]">
             {loading ? '⏳ Submitting...' : analyzing ? '🤖 AI Analyzing...' : '🚀 Submit Report'}
           </button>
         </div>
