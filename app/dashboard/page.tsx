@@ -21,7 +21,7 @@ export default function Dashboard() {
   const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 0
 
   const categories = ['Pothole', 'Water Leak', 'Streetlight', 'Waste', 'Tree Fall', 'Infrastructure']
-  const categoryIcons = { 'Pothole': '🕳️', 'Water Leak': '💧', 'Streetlight': '💡', 'Waste': '🗑️', 'Tree Fall': '🌳', 'Infrastructure': '🏗️' }
+  const categoryIcons: { [key: string]: string } = { 'Pothole': '🕳️', 'Water Leak': '💧', 'Streetlight': '💡', 'Waste': '🗑️', 'Tree Fall': '🌳', 'Infrastructure': '🏗️' }
   const categoryCount = categories.map(cat => ({
     name: cat,
     icon: categoryIcons[cat],
