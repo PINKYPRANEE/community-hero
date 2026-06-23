@@ -15,31 +15,36 @@ export default function ReportPage() {
   const [imageBase64, setImageBase64] = useState<any>(null)
   const [mediaType, setMediaType] = useState<any>(null)
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0]
+  const handleImageUpload = async (e: any) => {
+    const file = e.target.files?.[0]
     if (!file) return
 
     setMediaType(file.type)
     const reader = new FileReader()
     reader.onload = async (event) => {
-      const base64 = event.target.result.split(',')[1]
-      setImageBase64(base64)
-      setImagePreview(event.target.result)
+      const resultString = event.target?.result;
+      
+      // Fixes the red lines by making sure the result is a text string before parsing
+      if (typeof resultString === 'string') {
+        const base64 = resultString.split(',')[1]
+        setImageBase64(base64)
+        setImagePreview(resultString)
 
-      // Auto analyze with AI
-      setAnalyzing(true)
-      try {
-        const res = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64, mediaType: file.type })
-        })
-        const data = await res.json()
-        if (data.category) setCategory(data.category)
-      } catch (err) {
-        console.error(err)
+        // Auto analyze with AI
+        setAnalyzing(true)
+        try {
+          const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageBase64: base64, mediaType: file.type })
+          })
+          const data = await res.json()
+          if (data.category) setCategory(data.category)
+        } catch (err) {
+          console.error(err)
+        }
+        setAnalyzing(false)
       }
-      setAnalyzing(false)
     }
     reader.readAsDataURL(file)
   }
@@ -102,8 +107,7 @@ export default function ReportPage() {
               ) : (
                 <>
                   <div className="text-4xl mb-2">📷</div>
-                  <p className="text-gray-400">Click to upload or drag & drop</p>
-                  <p className="text-xs text-gray-300 mt-1">PNG, JPG up to 10MB</p>
+                  <p className="text-gray-400">Click to upload or drag & drop</p>                  <p className="text-xs text-gray-300 mt-1">PNG, JPG up to 10MB</p>
                 </>
               )}
               <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />

@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 
 export default function Home() {
-  const [issues, setIssues] = useState([])
+  // Explicitly tell TypeScript this array stores object structures
+  const [issues, setIssues] = useState<any[]>([])
 
   useEffect(() => {
     fetchIssues()
@@ -18,7 +19,8 @@ export default function Home() {
     if (data) setIssues(data)
   }
 
-  const handleVote = async (id, currentVotes) => {
+  // Explicitly declaring variable types to clear parameter line warnings
+  const handleVote = async (id: any, currentVotes: number) => {
     await supabase.from('issues').update({ votes: currentVotes + 1 }).eq('id', id)
     fetchIssues()
   }
@@ -64,13 +66,13 @@ export default function Home() {
         </div>
         <div className="bg-white rounded-2xl p-6 text-center shadow">
           <div className="text-4xl font-bold text-green-500">
-            {issues.filter(i => i.status === 'Resolved').length}
+            {issues.filter((i: any) => i.status === 'Resolved').length}
           </div>
           <div className="text-gray-500 mt-1">Issues Resolved</div>
         </div>
         <div className="bg-white rounded-2xl p-6 text-center shadow">
           <div className="text-4xl font-bold text-orange-500">
-            {issues.reduce((sum, i) => sum + (i.votes || 0), 0)}
+            {issues.reduce((sum: number, i: any) => sum + (i.votes || 0), 0)}
           </div>
           <div className="text-gray-500 mt-1">Total Votes</div>
         </div>
@@ -85,7 +87,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {issues.map((issue) => (
+            {issues.map((issue: any) => (
               <div key={issue.id} className="bg-white rounded-2xl p-5 shadow flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <span className="text-3xl">
@@ -96,7 +98,7 @@ export default function Home() {
                      issue.category === 'Tree Fall' ? '🌳' : '🏗️'}
                   </span>
                   <div>
-                    <div className="font-semibold text-gray-800">{issue.title}</div>
+                    <div className="font-semibold text-gray-800 edit-title">{issue.title}</div>
                     <div className="text-sm text-gray-400">📍 {issue.location}</div>
                   </div>
                 </div>
