@@ -4,9 +4,15 @@ import { supabase } from './lib/supabase'
 
 export default function Home() {
   const [issues, setIssues] = useState<any[]>([])
-  // State variables for keeping track of active filter selections
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [selectedStatus, setSelectedStatus] = useState<string>('All')
+
+  // Notification Toast State Configuration
+  const [toast, setToast] = useState<{ message: string; show: boolean; type: 'success' | 'error' }>({
+    message: '',
+    show: false,
+    type: 'success'
+  })
 
   useEffect(() => {
     fetchIssues()
@@ -17,18 +23,32 @@ export default function Home() {
       .from('issues')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(20) // Increased so filters have plenty of sample tickets to sort through!
+      .limit(20)
     if (data) setIssues(data)
+  }
+
+  // Trigger custom toast popups helper function
+  const triggerToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, show: true, type })
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, show: false }))
+    }, 3000) // Automatically hides the notification alert card after 3 seconds
   }
 
   const handleVote = async (e: React.MouseEvent, id: any, currentVotes: number) => {
     e.preventDefault() 
     e.stopPropagation() 
-    await supabase.from('issues').update({ votes: (currentVotes || 0) + 1 }).eq('id', id)
-    fetchIssues()
+    
+    const { error } = await supabase.from('issues').update({ votes: (currentVotes || 0) + 1 }).eq('id', id)
+    
+    if (error) {
+      triggerToast('Failed to register upvote. Please try again.', 'error')
+    } else {
+      triggerToast('Upvote recorded successfully! Civic score updated. 👍', 'success')
+      fetchIssues()
+    }
   }
 
-  // Computes the exact matching cards to show instantly on the dashboard screen
   const filteredIssues = issues.filter((issue) => {
     const matchesCategory = selectedCategory === 'All' || issue.category === selectedCategory
     const matchesStatus = selectedStatus === 'All' || issue.status === selectedStatus
@@ -36,7 +56,22 @@ export default function Home() {
   })
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 relative">
+      
+      {/* GLOBAL NOTIFICATION TOAST POPUP SYSTEM */}
+      <div className={`fixed top-5 right-5 z-50 transform transition-all duration-300 pointer-events-none ${
+        toast.show ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-4 opacity-0 scale-95'
+      }`}>
+        <div className={`px-5 py-3.5 rounded-xl shadow-lg border text-sm font-bold flex items-center gap-2 max-w-md ${
+          toast.type === 'success' 
+            ? 'bg-green-50 text-green-700 border-green-200 shadow-green-100' 
+            : 'bg-red-50 text-red-700 border-red-200 shadow-red-100'
+        }`}>
+          <span>{toast.type === 'success' ? '✅' : '❌'}</span>
+          <p>{toast.message}</p>
+        </div>
+      </div>
+
       {/* Navbar */}
       <nav className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -51,15 +86,15 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section with interactive visual entry */}
+      {/* Hero Section */}
       <section className="text-center py-20 px-4 transition-all duration-1000 ease-out transform">
         <h1 className="text-5xl font-bold text-gray-800 mb-4 animate-bounce [animation-iteration-count:1] [animation-duration:1.5s]">
           Report. Track. <span className="text-blue-600">Resolve.</span>
         </h1>
-        <p className="text-xl text-gray-500 mb-8 max-w-xl mx-auto transition-all duration-700 delay-300 opacity-95">
+        <p className="text-xl text-gray-500 mb-8 max-w-xl mx-auto opacity-95">
           Help fix your community — report potholes, broken streetlights, water leaks and more in seconds.
         </p>
-        <div className="flex justify-center gap-4 transition-all duration-1000 delay-500">
+        <div className="flex justify-center gap-4">
           <a href="/report" className="px-6 py-3 bg-blue-600 text-white rounded-xl text-lg font-semibold hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all duration-200 shadow-md shadow-blue-200">
             🚨 Report an Issue
           </a>
@@ -93,7 +128,7 @@ export default function Home() {
       <section className="max-w-3xl mx-auto px-4 mb-16">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">🔴 Recent Issues</h2>
 
-        {/* Clean, Responsive Search & Filter Control Deck */}
+        {/* Search & Filter Control Deck */}
         <div className="bg-white p-5 rounded-2xl shadow mb-6 flex flex-col gap-4">
           <div className="flex flex-wrap gap-2 items-center">
             <span className="text-sm font-semibold text-gray-400 mr-2">Category:</span>
