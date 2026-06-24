@@ -7,7 +7,6 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [selectedStatus, setSelectedStatus] = useState<string>('All')
 
-  // Notification Toast State Configuration
   const [toast, setToast] = useState<{ message: string; show: boolean; type: 'success' | 'error' }>({
     message: '',
     show: false,
@@ -27,24 +26,21 @@ export default function Home() {
     if (data) setIssues(data)
   }
 
-  // Trigger custom toast popups helper function
   const triggerToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, show: true, type })
     setTimeout(() => {
       setToast((prev) => ({ ...prev, show: false }))
-    }, 3000) // Automatically hides the notification alert card after 3 seconds
+    }, 3000)
   }
 
   const handleVote = async (e: React.MouseEvent, id: any, currentVotes: number) => {
-    e.preventDefault() 
-    e.stopPropagation() 
-    
+    e.preventDefault()
+    e.stopPropagation()
     const { error } = await supabase.from('issues').update({ votes: (currentVotes || 0) + 1 }).eq('id', id)
-    
     if (error) {
       triggerToast('Failed to register upvote. Please try again.', 'error')
     } else {
-      triggerToast('Upvote recorded successfully! Civic score updated. 👍', 'success')
+      triggerToast('Upvote recorded successfully! 👍', 'success')
       fetchIssues()
     }
   }
@@ -57,15 +53,15 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-50 relative">
-      
-      {/* GLOBAL NOTIFICATION TOAST POPUP SYSTEM */}
+
+      {/* Toast */}
       <div className={`fixed top-5 right-5 z-50 transform transition-all duration-300 pointer-events-none ${
         toast.show ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-4 opacity-0 scale-95'
       }`}>
         <div className={`px-5 py-3.5 rounded-xl shadow-lg border text-sm font-bold flex items-center gap-2 max-w-md ${
-          toast.type === 'success' 
-            ? 'bg-green-50 text-green-700 border-green-200 shadow-green-100' 
-            : 'bg-red-50 text-red-700 border-red-200 shadow-red-100'
+          toast.type === 'success'
+            ? 'bg-green-50 text-green-700 border-green-200'
+            : 'bg-red-50 text-red-700 border-red-200'
         }`}>
           <span>{toast.type === 'success' ? '✅' : '❌'}</span>
           <p>{toast.message}</p>
@@ -75,7 +71,15 @@ export default function Home() {
       {/* Navbar */}
       <nav className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">🏘️</span>
+          <svg width="36" height="36" viewBox="0 0 90 110">
+            <path d="M15 10 L75 10 L88 28 L88 82 L45 108 L2 82 L2 28 Z" fill="#2563EB"/>
+            <path d="M20 20 L70 20 L80 33 L80 78 L45 100 L10 78 L10 33 Z" fill="#1D4ED8"/>
+            <polygon points="45,30 28,48 36,48 36,65 54,65 54,48 62,48" fill="white"/>
+            <rect x="33" y="53" width="24" height="12" fill="#60A5FA"/>
+            <circle cx="45" cy="78" r="7" fill="#EF4444"/>
+            <path d="M45 85 L40 76 Q45 70 50 76 Z" fill="#EF4444"/>
+            <circle cx="45" cy="78" r="3" fill="white"/>
+          </svg>
           <span className="text-xl font-bold text-blue-600">CommunityHero</span>
         </div>
         <div className="flex gap-3">
@@ -87,11 +91,11 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="text-center py-20 px-4 transition-all duration-1000 ease-out transform">
-        <h1 className="text-5xl font-bold text-gray-800 mb-4 animate-bounce [animation-iteration-count:1] [animation-duration:1.5s]">
+      <section className="text-center py-20 px-4">
+        <h1 className="text-5xl font-bold text-gray-800 mb-4">
           Report. Track. <span className="text-blue-600">Resolve.</span>
         </h1>
-        <p className="text-xl text-gray-500 mb-8 max-w-xl mx-auto opacity-95">
+        <p className="text-xl text-gray-500 mb-8 max-w-xl mx-auto">
           Help fix your community — report potholes, broken streetlights, water leaks and more in seconds.
         </p>
         <div className="flex justify-center gap-4">
@@ -124,48 +128,40 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Recent Issues Panel */}
+      {/* Recent Issues */}
       <section className="max-w-3xl mx-auto px-4 mb-16">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">🔴 Recent Issues</h2>
 
-        {/* Search & Filter Control Deck */}
+        {/* Filters */}
         <div className="bg-white p-5 rounded-2xl shadow mb-6 flex flex-col gap-4">
           <div className="flex flex-wrap gap-2 items-center">
             <span className="text-sm font-semibold text-gray-400 mr-2">Category:</span>
             {['All', 'Pothole', 'Water Leak', 'Streetlight', 'Waste', 'Tree Fall', 'Infrastructure'].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
+              <button key={cat} onClick={() => setSelectedCategory(cat)}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
                   selectedCategory === cat
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-200'
+                    ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                }`}
-              >
+                }`}>
                 {cat}
               </button>
             ))}
           </div>
-
           <div className="flex flex-wrap gap-2 items-center border-t border-gray-100 pt-3">
             <span className="text-sm font-semibold text-gray-400 mr-4">Status:</span>
             {['All', 'Reported', 'In Progress', 'Resolved'].map((stat) => (
-              <button
-                key={stat}
-                onClick={() => setSelectedStatus(stat)}
+              <button key={stat} onClick={() => setSelectedStatus(stat)}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
                   selectedStatus === stat
-                    ? 'bg-gray-800 text-white border-gray-800 shadow-sm'
+                    ? 'bg-gray-800 text-white border-gray-800'
                     : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                }`}
-              >
+                }`}>
                 {stat}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Dynamic List Rendering Area */}
         {filteredIssues.length === 0 ? (
           <div className="bg-white rounded-2xl p-10 text-center shadow text-gray-400 font-medium">
             🔍 No matching issues found for this filter combination.
@@ -173,11 +169,8 @@ export default function Home() {
         ) : (
           <div className="flex flex-col gap-4">
             {filteredIssues.map((issue: any) => (
-              <a 
-                href={`/issue/${issue.id}`} 
-                key={issue.id} 
-                className="bg-white rounded-2xl p-5 shadow flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer"
-              >
+              <a href={`/issue/${issue.id}`} key={issue.id}
+                className="bg-white rounded-2xl p-5 shadow flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer">
                 <div className="flex items-center gap-4">
                   <span className="text-3xl">
                     {issue.category === 'Pothole' ? '🕳️' :
@@ -187,7 +180,7 @@ export default function Home() {
                      issue.category === 'Tree Fall' ? '🌳' : '🏗️'}
                   </span>
                   <div>
-                    <div className="font-semibold text-gray-800 edit-title">{issue.title}</div>
+                    <div className="font-semibold text-gray-800">{issue.title}</div>
                     <div className="text-sm text-gray-400">📍 {issue.location || 'Local Community'}</div>
                   </div>
                 </div>
@@ -197,10 +190,8 @@ export default function Home() {
                     issue.status === 'In Progress' ? 'bg-yellow-100 text-yellow-600' :
                     'bg-red-100 text-red-600'
                   }`}>{issue.status || 'Reported'}</span>
-                  <button 
-                    onClick={(e) => handleVote(e, issue.id, issue.votes)}
-                    className="text-gray-400 text-sm hover:text-blue-500 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100 transition flex items-center gap-1"
-                  >
+                  <button onClick={(e) => handleVote(e, issue.id, issue.votes)}
+                    className="text-gray-400 text-sm hover:text-blue-500 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100 transition flex items-center gap-1">
                     👍 {issue.votes || 0}
                   </button>
                 </div>
