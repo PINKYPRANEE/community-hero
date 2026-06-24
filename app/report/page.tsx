@@ -9,70 +9,45 @@ export default function ReportPage() {
   const [severity, setSeverity] = useState('Medium')
   const [category, setCategory] = useState('Pothole')
   const [loading, setLoading] = useState(false)
-  const [analyzing, setAnalyzing] = useState(false)
   const [success, setSuccess] = useState(false)
   const [imagePreview, setImagePreview] = useState<any>(null)
-  const [imageBase64, setImageBase64] = useState<any>(null)
-  const [mediaType, setMediaType] = useState<any>(null)
 
-  // Explicit tracking coordinates
+  // Explicit hardware tracking states
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
   const [gpsLocked, setGpsLocked] = useState(false)
 
+  // Automatically request GPS location access right when the page mounts
   useEffect(() => {
-    captureGPS()
+    requestAutomaticGPS()
   }, [])
 
-  const captureGPS = () => {
+  const requestAutomaticGPS = () => {
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((pos) => {
-        setLatitude(pos.coords.latitude)
-        setLongitude(pos.coords.longitude)
-        setGpsLocked(true)
-        if (!location) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLatitude(pos.coords.latitude)
+          setLongitude(pos.coords.longitude)
+          setGpsLocked(true)
+          // Pre-fills the location box with visual confirmation text
           setLocation(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`)
-        }
-      }, (err) => console.log("GPS access skipped or deferred:", err), { enableHighAccuracy: true })
+        },
+        (err) => {
+          console.log("GPS prompt declined or skipped by client:", err)
+          setGpsLocked(false)
+        },
+        { enableHighAccuracy: true }
+      );
     }
   }
 
-  const handleImageUpload = async (e: any) => {
+  const handleImageChange = (e: any) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    setMediaType(file.type)
     const reader = new FileReader()
-    reader.onload = async (event) => {
-      const resultString = event.target?.result
-      if (typeof resultString === 'string') {
-        const base64 = resultString.split(',')[1]
-        setImageBase64(base64)
-        setImagePreview(resultString)
-
-        setAnalyzing(true)
-        try {
-          const res = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageBase64: base64, mediaType: file.type })
-          })
-          const data = await res.json()
-          
-          const validCategories = ["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"]
-          const matched = validCategories.find(cat =>
-            data.category?.toLowerCase().includes(cat.toLowerCase())
-          )
-          if (matched) setCategory(matched)
-          if (data.title) setTitle(data.title)
-          if (data.description) setDescription(data.description)
-          if (data.severity) setSeverity(data.severity)
-
-        } catch (err) {
-          console.error(err)
-        }
-        setAnalyzing(false)
-      }
+    reader.onload = (event) => {
+      setImagePreview(event.target?.result)
     }
     reader.readAsDataURL(file)
   }
@@ -87,7 +62,7 @@ export default function ReportPage() {
     let finalLat = latitude
     let finalLng = longitude
 
-    // Step A: Parse location if it contains manual comma-separated coordinates
+    // Check if user manually typed or modified the location input box to explicit coordinates
     if (location.includes(',')) {
       const parts = location.split(',')
       const parsedLat = parseFloat(parts[0])
@@ -98,19 +73,24 @@ export default function ReportPage() {
       }
     }
 
-    // Step B: Convert typed city name or address text into coordinates dynamically
+    // Geocoding fallback: If no hardware GPS coordinate is recorded, fetch the location via name parsing
     if (!finalLat || !finalLng) {
       try {
         const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`)
         const geoData = await response.json()
-        
         if (geoData && geoData.length > 0) {
           finalLat = parseFloat(geoData[0].lat)
           finalLng = parseFloat(geoData[0].lon)
         }
       } catch (err) {
-        console.error("Geocoding service error:", err)
+        console.error("Geocoding lookup pipeline exception:", err)
       }
+    }
+
+    // Baseline fallback coordinate if all lookups drop
+    if (!finalLat || !finalLng) {
+      finalLat = 14.4426
+      finalLng = 79.9865
     }
 
     const { error } = await supabase.from('issues').insert([{
@@ -127,7 +107,7 @@ export default function ReportPage() {
     
     setLoading(false)
     if (error) {
-      alert('Error: ' + error.message)
+      alert('Database error: ' + error.message)
     } else {
       setSuccess(true)
       setTitle('')
@@ -137,12 +117,13 @@ export default function ReportPage() {
       setSeverity('Medium')
       setCategory('Pothole')
       setGpsLocked(false)
-      captureGPS()
+      requestAutomaticGPS() // Relock position array for subsequent report entries
     }
   }
 
   return (
     <main className="min-h-screen bg-gray-50">
+      {/* Navigation Headers */}
       <nav className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🏘️</span>
@@ -153,103 +134,134 @@ export default function ReportPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-10">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">🚨 Report an Issue</h1>
-        <p className="text-gray-500 mb-8">Upload a photo — AI will fill everything automatically!</p>
+        <p className="text-gray-500 mb-8">Provide clear visual verification and tracking information below.</p>
 
         {success && (
           <div className="bg-green-100 text-green-700 px-4 py-3 rounded-xl mb-6 font-medium">
-            ✅ Issue reported successfully! Thank you for helping your community!
+            ✅ Issue logged successfully! Your community database metrics have been updated.
           </div>
         )}
 
         <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-6">
-          {/* Photo Upload */}
+          {/* Visual Evidence Field Upload */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📸 Upload Photo</label>
-            <label className="block border-2 border-dashed border-blue-300 rounded-xl p-10 text-center cursor-pointer hover:bg-blue-50">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">📸 Issue Evidence Image</label>
+            <label className="block border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors">
               {imagePreview ? (
                 <img src={imagePreview} alt="preview" className="max-h-48 mx-auto rounded-lg" />
               ) : (
                 <>
                   <div className="text-4xl mb-2">📷</div>
-                  <p className="text-gray-400">Click to upload or drag & drop</p>
-                  <p className="text-xs text-gray-300 mt-1">PNG, JPG up to 10MB</p>
+                  <p className="text-gray-400 text-sm">Select issue snapshot file</p>
+                  <p className="text-xs text-gray-300 mt-1">PNG, JPG formats supported</p>
                 </>
               )}
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
             </label>
-            {analyzing && (
-              <div className="mt-2 text-blue-500 font-medium animate-pulse">
-                🤖 AI is analyzing your image and filling the form...
-              </div>
-            )}
           </div>
 
-          {/* AI Category */}
+          {/* Incident Classification Tagging Group */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">🤖 AI Category</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">🏷️ Issue Category</label>
             <div className="flex gap-2 flex-wrap">
               {["Pothole", "Water Leak", "Streetlight", "Waste", "Tree Fall", "Infrastructure"].map((cat) => (
-                <span key={cat} onClick={() => setCategory(cat)}
-                  className={`px-3 py-1 rounded-full text-sm border cursor-pointer transition-all ${category === cat ? "bg-blue-600 text-white border-blue-600" : "text-gray-600 border-gray-300 hover:border-blue-400"}`}>
-                  {cat}
-                </span>
+                <button 
+                  type="button"
+                  key={cat} 
+                  onClick={() => setCategory(cat)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${
+                    category === cat 
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-100" 
+                      : "text-gray-600 bg-white border-gray-200 hover:border-gray-400"
+                  }`}
+                >
+                  {cat === 'Pothole' ? '🕳️ Pothole' :
+                   cat === 'Water Leak' ? '💧 Water Leak' :
+                   cat === 'Streetlight' ? '💡 Streetlight' :
+                   cat === 'Waste' ? '🗑️ Waste' :
+                   cat === 'Tree Fall' ? '🌳 Tree Fall' : '🏗️ Infrastructure'}
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Title */}
+          {/* Title Field Input Descriptor */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📝 Issue Title</label>
-            <input type="text" value={title} onChange={e => setTitle(e.target.value)}
-              placeholder="AI will fill this automatically..."
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            <label className="block text-sm font-semibold text-gray-700 mb-2">📝 Issue Summary Title</label>
+            <input 
+              type="text" 
+              value={title} 
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Provide a quick title summary description..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" 
+            />
           </div>
 
-          {/* Description */}
+          {/* Comprehensive Narrative Textarea */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📄 Description</label>
-            <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)}
-              placeholder="AI will fill this automatically..."
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            <label className="block text-sm font-semibold text-gray-700 mb-2">📄 Situation Context Details</label>
+            <textarea 
+              rows={3} 
+              value={description} 
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Elaborate on structural degradation parameters or safety hazards present..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" 
+            />
           </div>
 
-          {/* Location */}
+          {/* Location Processing Frame */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">📍 Location</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">📍 Target Geographic Placement Location</label>
             <div className="flex gap-2">
-              <input type="text" value={location} onChange={e => setLocation(e.target.value)}
-                placeholder="Type an address (e.g. Balaji Colony, Tirupati) or city name"
-                className="flex-1 border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-              <button type="button" onClick={() => {
-                navigator.geolocation.getCurrentPosition(pos => {
-                  setLatitude(pos.coords.latitude)
-                  setLongitude(pos.coords.longitude)
-                  setGpsLocked(true)
-                  setLocation(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`)
-                })
-              }} className={`px-4 py-3 rounded-xl font-medium transition-all ${gpsLocked ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                {gpsLocked ? '🎯 Locked' : '📡 Auto'}
+              <input 
+                type="text" 
+                value={location} 
+                onChange={e => setLocation(e.target.value)}
+                placeholder="Enter city or district reference text block (e.g. Balaji Colony, Tirupati)"
+                className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" 
+              />
+              <button 
+                type="button" 
+                onClick={requestAutomaticGPS} 
+                className={`px-4 py-3 rounded-xl font-bold text-xs transition-all flex items-center gap-1 ${
+                  gpsLocked 
+                    ? 'bg-green-50 text-green-600 border border-green-200' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {gpsLocked ? '🎯 Locked' : '📡 Pull GPS'}
               </button>
             </div>
           </div>
 
-          {/* Severity */}
+          {/* Severity Matrix Selection Buttons */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">⚠️ Severity</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">⚠️ Urgent Priority Severity</label>
             <div className="flex gap-3">
               {[["🟢", "Low"], ["🟡", "Medium"], ["🔴", "High"]].map(([emoji, level]) => (
-                <button type="button" key={level} onClick={() => setSeverity(level)}
-                  className={`flex-1 py-2 rounded-xl border font-medium transition-all ${severity === level ? "border-blue-400 bg-blue-50 text-blue-600" : "border-gray-200 text-gray-500 hover:border-gray-400"}`}>
+                <button 
+                  type="button" 
+                  key={level} 
+                  onClick={() => setSeverity(level)}
+                  className={`flex-1 py-2 rounded-xl border text-sm font-bold transition-all ${
+                    severity === level 
+                      ? "border-blue-400 bg-blue-50 text-blue-600" 
+                      : "border-gray-200 text-gray-500 hover:border-gray-400"
+                  }`}
+                >
                   {emoji} {level}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Submit */}
-          <button onClick={handleSubmit} disabled={loading || analyzing}
-            className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition-all transform active:scale-[0.995]">
-            {loading ? '⏳ Submitting...' : '🚀 Submit Report'}
+          {/* Submission Commit Anchor */}
+          <button 
+            onClick={handleSubmit} 
+            disabled={loading}
+            className="w-full py-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.995] text-white rounded-xl text-lg font-bold transition-all disabled:opacity-50 shadow-md shadow-blue-100"
+          >
+            {loading ? '⏳ Indexing Report Node...' : '🚀 Submit Report'}
           </button>
         </div>
       </div>
