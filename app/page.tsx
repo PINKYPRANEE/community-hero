@@ -91,36 +91,47 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="text-center py-20 px-4">
-        <h1 className="text-5xl font-bold text-gray-800 mb-4">
-          Report. Track. <span className="text-blue-600">Resolve.</span>
+      <section className="text-center py-20 px-4 bg-gradient-to-b from-blue-50 to-gray-50">
+        <div className="inline-block mb-6 animate-bounce">
+          <svg width="80" height="80" viewBox="0 0 90 110">
+            <path d="M15 10 L75 10 L88 28 L88 82 L45 108 L2 82 L2 28 Z" fill="#2563EB"/>
+            <path d="M20 20 L70 20 L80 33 L80 78 L45 100 L10 78 L10 33 Z" fill="#1D4ED8"/>
+            <polygon points="45,30 28,48 36,48 36,65 54,65 54,48 62,48" fill="white"/>
+            <rect x="33" y="53" width="24" height="12" fill="#60A5FA"/>
+            <circle cx="45" cy="78" r="7" fill="#EF4444"/>
+            <path d="M45 85 L40 76 Q45 70 50 76 Z" fill="#EF4444"/>
+            <circle cx="45" cy="78" r="3" fill="white"/>
+          </svg>
+        </div>
+        <h1 className="text-5xl font-bold text-gray-800 mb-4 animate-fade-in">
+          Report. Track. <span className="text-blue-600 animate-pulse">Resolve.</span>
         </h1>
-        <p className="text-xl text-gray-500 mb-8 max-w-xl mx-auto">
+        <p className="text-xl text-gray-500 mb-8 max-w-xl mx-auto animate-fade-in">
           Help fix your community — report potholes, broken streetlights, water leaks and more in seconds.
         </p>
         <div className="flex justify-center gap-4">
-          <a href="/report" className="px-6 py-3 bg-blue-600 text-white rounded-xl text-lg font-semibold hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all duration-200 shadow-md shadow-blue-200">
+          <a href="/report" className="px-6 py-3 bg-blue-600 text-white rounded-xl text-lg font-semibold hover:bg-blue-700 hover:scale-110 active:scale-95 transition-all duration-200 shadow-lg shadow-blue-200">
             🚨 Report an Issue
           </a>
-          <a href="/map" className="px-6 py-3 border-2 border-blue-600 text-blue-600 rounded-xl text-lg font-semibold hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all duration-200">
+          <a href="/map" className="px-6 py-3 border-2 border-blue-600 text-blue-600 rounded-xl text-lg font-semibold hover:bg-blue-50 hover:scale-110 active:scale-95 transition-all duration-200">
             🗺️ View Map
           </a>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="grid grid-cols-3 gap-6 max-w-3xl mx-auto px-4 mb-16">
-        <div className="bg-white rounded-2xl p-6 text-center shadow">
+      <section className="grid grid-cols-3 gap-6 max-w-3xl mx-auto px-4 mb-16 mt-10">
+        <div className="bg-white rounded-2xl p-6 text-center shadow stat-card hover:scale-105 transition-transform duration-200">
           <div className="text-4xl font-bold text-blue-600">{issues.length}</div>
           <div className="text-gray-500 mt-1">Issues Reported</div>
         </div>
-        <div className="bg-white rounded-2xl p-6 text-center shadow">
+        <div className="bg-white rounded-2xl p-6 text-center shadow stat-card hover:scale-105 transition-transform duration-200">
           <div className="text-4xl font-bold text-green-500">
             {issues.filter((i: any) => i.status === 'Resolved').length}
           </div>
           <div className="text-gray-500 mt-1">Issues Resolved</div>
         </div>
-        <div className="bg-white rounded-2xl p-6 text-center shadow">
+        <div className="bg-white rounded-2xl p-6 text-center shadow stat-card hover:scale-105 transition-transform duration-200">
           <div className="text-4xl font-bold text-orange-500">
             {issues.reduce((sum: number, i: any) => sum + (i.votes || 0), 0)}
           </div>
@@ -170,7 +181,7 @@ export default function Home() {
           <div className="flex flex-col gap-4">
             {filteredIssues.map((issue: any) => (
               <a href={`/issue/${issue.id}`} key={issue.id}
-                className="bg-white rounded-2xl p-5 shadow flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer">
+                className="issue-card bg-white rounded-2xl p-5 shadow flex items-center justify-between cursor-pointer">
                 <div className="flex items-center gap-4">
                   <span className="text-3xl">
                     {issue.category === 'Pothole' ? '🕳️' :
