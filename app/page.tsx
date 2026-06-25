@@ -211,6 +211,103 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* AI Chatbot */}
+      <ChatBot />
     </main>
+  )
+}
+
+function ChatBot() {
+  const [open, setOpen] = useState(false)
+  const [messages, setMessages] = useState<any[]>([
+    { role: 'bot', text: '👋 Hi! I am CommunityHero AI. How can I help you today?' }
+  ])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const sendMessage = async () => {
+    if (!input.trim()) return
+    const userMsg = input
+    setInput('')
+    setMessages(prev => [...prev, { role: 'user', text: userMsg }])
+    setLoading(true)
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg })
+      })
+      const data = await res.json()
+      setMessages(prev => [...prev, { role: 'bot', text: data.reply }])
+    } catch {
+      setMessages(prev => [...prev, { role: 'bot', text: 'Sorry something went wrong!' }])
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50">
+      {open && (
+        <div className="mb-4 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+          {/* Header */}
+          <div className="bg-blue-600 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🤖</span>
+              <div>
+                <div className="text-white font-bold text-sm">CommunityHero AI</div>
+                <div className="text-blue-200 text-xs">Always here to help!</div>
+              </div>
+            </div>
+            <button onClick={() => setOpen(false)} className="text-white hover:text-blue-200 text-xl">×</button>
+          </div>
+
+          {/* Messages */}
+          <div className="h-72 overflow-y-auto p-4 flex flex-col gap-3 bg-gray-50">
+            {messages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`px-4 py-2 rounded-2xl text-sm max-w-[85%] ${
+                  msg.role === 'user'
+                    ? 'bg-blue-600 text-white rounded-br-none'
+                    : 'bg-white text-gray-700 shadow-sm rounded-bl-none border border-gray-100'
+                }`}>
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="bg-white px-4 py-2 rounded-2xl text-sm shadow-sm border border-gray-100 text-gray-400 animate-pulse">
+                  🤖 Thinking...
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div className="p-3 bg-white border-t border-gray-100 flex gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+              placeholder="Ask me anything..."
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <button onClick={sendMessage}
+              className="bg-blue-600 text-white px-3 py-2 rounded-xl hover:bg-blue-700 text-sm font-bold">
+              ➤
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle Button */}
+      <button onClick={() => setOpen(!open)}
+        className="bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg hover:bg-blue-700 hover:scale-110 transition-all duration-200 flex items-center justify-center text-2xl">
+        {open ? '✕' : '🤖'}
+      </button>
+    </div>
   )
 }
